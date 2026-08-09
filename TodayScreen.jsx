@@ -2,17 +2,25 @@ import { useState } from "react";
 import { Plus, Minus, X, Trophy, RotateCcw, UserPlus, Menu, Pencil, Check } from "lucide-react";
 import { INK, CREAM, AMBER, AMBER_DARK, SLATE, LINE, SERIF } from "./theme";
 
-export default function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRound }) {
-  const [gameName, setGameName] = useState("Friday Game Night");
+export default function TodayScreen({
+  onOpenMenu, players, setPlayers, round, setRound, onLogRound, gameName, setGameName,
+}) {
   const [editingGameName, setEditingGameName] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [newPlayer, setNewPlayer] = useState("");
+  const [amounts, setAmounts] = useState({}); // per-player typed number
 
   const leaderId = players.length
     ? players.reduce((a, b) => (b.score > (a?.score ?? -Infinity) ? b : a), null)?.id
     : null;
 
-  function adjustScore(id, delta) {
+  function getAmount(id) {
+    const n = parseInt(amounts[id], 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  function adjustScore(id, sign) {
+    const delta = sign * getAmount(id);
     setPlayers((ps) => ps.map((p) => (p.id === id ? { ...p, score: Math.max(0, p.score + delta) } : p)));
   }
 
@@ -106,61 +114,70 @@ export default function TodayScreen({ onOpenMenu, players, setPlayers, round, se
               return (
                 <div
                   key={p.id}
-                  className="rounded-2xl px-4 py-4 flex items-center justify-between"
+                  className="rounded-2xl px-4 py-4"
                   style={{ backgroundColor: "#FFFFFF", border: isLeader ? `2px solid ${AMBER}` : `1px solid ${LINE}` }}
                 >
-                  <div className="flex flex-col min-w-0 flex-1 mr-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      {isLeader && <Trophy size={13} color={AMBER_DARK} />}
-                      {isEditing ? (
-                        <input
-                          autoFocus
-                          value={p.name}
-                          onChange={(e) => renamePlayer(p.id, e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && setEditingPlayerId(null)}
-                          onBlur={() => setEditingPlayerId(null)}
-                          className="font-semibold bg-transparent outline-none border-b min-w-0"
-                          style={{ color: INK, fontSize: "15px", borderColor: AMBER }}
-                        />
-                      ) : (
-                        <button
-                          onClick={() => setEditingPlayerId(p.id)}
-                          className="font-semibold truncate text-left"
-                          style={{ color: INK, fontSize: "15px" }}
-                        >
-                          {p.name}
-                        </button>
-                      )}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-col min-w-0 flex-1 mr-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {isLeader && <Trophy size={13} color={AMBER_DARK} />}
+                        {isEditing ? (
+                          <input
+                            autoFocus
+                            value={p.name}
+                            onChange={(e) => renamePlayer(p.id, e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && setEditingPlayerId(null)}
+                            onBlur={() => setEditingPlayerId(null)}
+                            className="font-semibold bg-transparent outline-none border-b min-w-0"
+                            style={{ color: INK, fontSize: "15px", borderColor: AMBER }}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setEditingPlayerId(p.id)}
+                            className="font-semibold truncate text-left"
+                            style={{ color: INK, fontSize: "15px" }}
+                          >
+                            {p.name}
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-2xl font-bold tabular-nums" style={{ fontFamily: SERIF, color: INK }}>
+                        {p.score}
+                      </span>
                     </div>
-                    <span className="text-2xl font-bold tabular-nums" style={{ fontFamily: SERIF, color: INK }}>
-                      {p.score}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => adjustScore(p.id, -1)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: CREAM, color: INK }}
-                      aria-label={`Subtract point from ${p.name}`}
-                    >
-                      <Minus size={15} />
-                    </button>
-                    <button
-                      onClick={() => adjustScore(p.id, 1)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: AMBER, color: INK }}
-                      aria-label={`Add point to ${p.name}`}
-                    >
-                      <Plus size={15} />
-                    </button>
                     <button
                       onClick={() => removePlayer(p.id)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center ml-1"
+                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
                       style={{ color: SLATE }}
                       aria-label={`Remove ${p.name}`}
                     >
                       <X size={13} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={amounts[p.id] ?? ""}
+                      onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))}
+                      placeholder="1"
+                      className="w-16 rounded-lg px-2 py-2 text-sm text-center outline-none"
+                      style={{ border: `1px solid ${LINE}`, color: INK }}
+                      aria-label={`Points to add or subtract for ${p.name}`}
+                    />
+                    <button
+                      onClick={() => adjustScore(p.id, -1)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1 text-sm font-semibold"
+                      style={{ backgroundColor: CREAM, color: INK }}
+                    >
+                      <Minus size={14} /> Minus
+                    </button>
+                    <button
+                      onClick={() => adjustScore(p.id, 1)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1 text-sm font-semibold"
+                      style={{ backgroundColor: AMBER, color: INK }}
+                    >
+                      <Plus size={14} /> Add
                     </button>
                   </div>
                 </div>
@@ -197,7 +214,7 @@ export default function TodayScreen({ onOpenMenu, players, setPlayers, round, se
         </button>
 
         <p className="text-center text-[11px] mt-4" style={{ color: SLATE }}>
-          Tap a name or the pencil to rename. Every point, on the record.
+          Type a number, then tap Add or Minus to apply it.
         </p>
       </div>
     </div>

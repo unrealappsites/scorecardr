@@ -1,9 +1,9 @@
-import { X, Home, Dice5, ListOrdered, Settings as SettingsIcon } from "lucide-react";
+import { X, Home, Trophy, Dice5, Settings as SettingsIcon } from "lucide-react";
 import { INK, AMBER, CREAM } from "./theme";
 
 const NAV = [
-  { key: "today", label: "Today", icon: Home },
-  { key: "history", label: "History", icon: ListOrdered },
+  { key: "home", label: "Home", icon: Home },
+  { key: "today", label: "Today", icon: Trophy },
   { key: "games", label: "Games", icon: Dice5 },
   { key: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -50,7 +50,6 @@ export default function Sidebar({ open, onClose, active, onNavigate, onSignOut }
           </button>
         </div>
       </div>
-      {/* backdrop */}
       <div className="flex-1 h-full bg-black/30" onClick={onClose} />
     </div>
   );
