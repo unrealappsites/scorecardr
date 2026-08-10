@@ -1,13 +1,9 @@
-import { Menu, Dice5 } from "lucide-react";
+import { Menu, Dice5, Inbox } from "lucide-react";
 import { INK, CREAM, AMBER, SLATE, LINE, SERIF } from "./theme";
 
-const PAST_GAMES = [
-  { name: "Friday Game Night", players: 3, date: "Aug 8" },
-  { name: "Catan Sunday", players: 4, date: "Aug 2" },
-  { name: "Poker w/ the crew", players: 5, date: "Jul 26" },
-];
-
 export default function GamesScreen({ onOpenMenu }) {
+  const games = []; // populated once finished games are actually saved
+
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ backgroundColor: CREAM }}>
       <div className="w-full max-w-sm px-6 pt-6 pb-16">
@@ -30,27 +26,32 @@ export default function GamesScreen({ onOpenMenu }) {
           Every game, kept.
         </h1>
 
-        <div className="flex flex-col gap-3">
-          {PAST_GAMES.map((g) => (
-            <div
-              key={g.name}
-              className="rounded-2xl px-4 py-4 flex items-center gap-3"
-              style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}
-            >
+        {games.length === 0 ? (
+          <div className="rounded-2xl px-4 py-8 text-center" style={{ backgroundColor: "#FFFFFF", border: `1px dashed ${LINE}` }}>
+            <Inbox size={22} color={SLATE} className="mx-auto" />
+            <p className="font-semibold mt-2 mb-1" style={{ color: INK }}>No games yet</p>
+            <p className="text-sm" style={{ color: SLATE }}>Finish a game from Home and it'll show up here.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {games.map((g) => (
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ backgroundColor: CREAM }}
+                key={g.name}
+                className="rounded-2xl px-4 py-4 flex items-center gap-3 transition-shadow hover:shadow-md"
+                style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}
               >
-                <Dice5 size={18} color={INK} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: CREAM }}>
+                  <Dice5 size={18} color={INK} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate" style={{ color: INK }}>{g.name}</p>
+                  <p className="text-xs" style={{ color: SLATE }}>{g.players} players</p>
+                </div>
+                <span className="text-xs" style={{ color: SLATE }}>{g.date}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate" style={{ color: INK }}>{g.name}</p>
-                <p className="text-xs" style={{ color: SLATE }}>{g.players} players</p>
-              </div>
-              <span className="text-xs" style={{ color: SLATE }}>{g.date}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

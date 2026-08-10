@@ -34,7 +34,7 @@ export default function HomeScreen({ onOpenMenu, log, round, onNewGame }) {
         ) : (
           <div className="flex flex-col gap-3">
             {[...log].reverse().map((entry) => (
-              <div key={entry.round} className="rounded-2xl px-4 py-4" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
+              <div key={entry.round} className="rounded-2xl px-4 py-4 transition-shadow hover:shadow-md" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
                 <p className="text-[11px] uppercase tracking-wide font-semibold mb-2" style={{ color: SLATE }}>
                   Round {entry.round}
                 </p>
@@ -54,7 +54,7 @@ export default function HomeScreen({ onOpenMenu, log, round, onNewGame }) {
 
       <button
         onClick={onNewGame}
-        className="fixed bottom-8 right-6 rounded-full px-5 py-4 font-bold text-sm flex items-center gap-2 shadow-lg"
+        className="fixed bottom-8 right-6 rounded-full px-5 py-4 font-bold text-sm flex items-center gap-2 shadow-lg transition-transform active:scale-95 hover:scale-105"
         style={{ backgroundColor: AMBER, color: INK }}
       >
         <Plus size={16} /> New Game
