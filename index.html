@@ -8,11 +8,19 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-fadein { animation: fadeIn .25s ease-out both; }
+  @keyframes scoreBump { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
+  .animate-scorebump { animation: scoreBump .28s ease-out; }
+  button { cursor: pointer; }
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState } = React;
+const { useState, useRef, useEffect } = React;
 
 const INK = "#1B2130";
 const CREAM = "#F3EEE4";
@@ -22,10 +30,42 @@ const SLATE = "#6B7280";
 const LINE = "#E4DDCC";
 const SERIF = "Georgia, 'Times New Roman', serif";
 
+/* ---------- Custom icon set (inline SVG, no emoji / no external deps) ---------- */
+function Icon({ path, size = 20, color = "currentColor", viewBox = "0 0 24 24", children }) {
+  return (
+    <svg width={size} height={size} viewBox={viewBox} fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+}
+const IconMenu = (p) => <Icon {...p}><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></Icon>;
+const IconX = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Icon>;
+const IconCheck = (p) => <Icon {...p}><polyline points="20 6 9 17 4 12" /></Icon>;
+const IconPencil = (p) => <Icon {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></Icon>;
+const IconTrophy = (p) => <Icon {...p}><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" /><path d="M5 4H3a2 2 0 0 0 0 4h2" /><path d="M19 4h2a2 2 0 0 1 0 4h-2" /></Icon>;
+const IconRotate = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" /></Icon>;
+const IconUserPlus = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="16" y1="11" x2="22" y2="11" /></Icon>;
+const IconPlus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
+const IconMinus = (p) => <Icon {...p}><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
+const IconHome = (p) => <Icon {...p}><path d="M3 12l9-9 9 9" /><path d="M5 10v10h14V10" /><path d="M9 21v-6h6v6" /></Icon>;
+const IconDice = (p) => <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="16" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /><circle cx="8" cy="16" r="1.3" fill="currentColor" stroke="none" /><circle cx="16" cy="16" r="1.3" fill="currentColor" stroke="none" /></Icon>;
+const IconSettings = (p) => <Icon {...p}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></Icon>;
+const IconBell = (p) => <Icon {...p}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></Icon>;
+const IconUser = (p) => <Icon {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Icon>;
+const IconTrash = (p) => <Icon {...p}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /></Icon>;
+const IconGithub = (p) => <Icon {...p}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" /></Icon>;
+const IconArrowRight = (p) => <Icon {...p}><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></Icon>;
+const IconInbox = (p) => <Icon {...p}><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" /></Icon>;
+
+/* ---------- Shared bits ---------- */
 function TopBar({ onOpenMenu, right }) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <button onClick={onOpenMenu} aria-label="Open menu" style={{ fontSize: 22, color: INK }}>☰</button>
+      <button onClick={onOpenMenu} aria-label="Open menu"
+        className="p-1 -ml-1 rounded-lg transition-transform active:scale-90 hover:opacity-70">
+        <IconMenu size={22} color={INK} />
+      </button>
       <span className="text-lg font-bold" style={{ fontFamily: SERIF, color: INK }}>
         scorecardr<span style={{ color: AMBER }}>.</span>
       </span>
@@ -34,86 +74,104 @@ function TopBar({ onOpenMenu, right }) {
   );
 }
 
+function ScoreValue({ value }) {
+  const [bump, setBump] = useState(false);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (prev.current !== value) {
+      setBump(true);
+      prev.current = value;
+      const t = setTimeout(() => setBump(false), 280);
+      return () => clearTimeout(t);
+    }
+  }, [value]);
+  return (
+    <span
+      className={"text-2xl font-bold tabular-nums inline-block " + (bump ? "animate-scorebump" : "")}
+      style={{ fontFamily: SERIF, color: INK }}
+    >
+      {value}
+    </span>
+  );
+}
+
+/* ---------- Sign in — GitHub only for now ---------- */
 function SignIn({ onSignedIn }) {
-  const [tab, setTab] = useState("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ backgroundColor: CREAM }}>
-      <div className="w-full max-w-sm px-6 pt-14 pb-16">
+      <div className="w-full max-w-sm px-6 pt-14 pb-16 animate-fadein">
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-3" style={{ color: SLATE }}>Scorecardr Access</p>
-        <h1 className="font-bold leading-[1.05] mb-8" style={{ fontFamily: SERIF, fontSize: "40px", color: INK }}>
+        <h1 className="font-bold leading-[1.05] mb-4" style={{ fontFamily: SERIF, fontSize: "40px", color: INK }}>
           Every point,<br />on the record.
         </h1>
-        <div className="flex gap-6 mb-1">
-          <button onClick={() => setTab("signin")} className="font-semibold pb-2 text-base" style={{ color: tab === "signin" ? INK : SLATE }}>Sign in</button>
-          <button onClick={() => setTab("create")} className="font-semibold pb-2 text-base" style={{ color: tab === "create" ? INK : SLATE }}>Create account</button>
-        </div>
-        <div className="h-[2px] w-full mb-8" style={{ backgroundColor: LINE }}>
-          <div className="h-full transition-all" style={{ width: "50%", backgroundColor: AMBER, marginLeft: tab === "create" ? "50%" : 0 }} />
-        </div>
-        <label className="text-[11px] uppercase tracking-wide font-medium" style={{ color: SLATE }}>Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-          className="w-full mt-1 mb-4 rounded-xl px-4 py-3 outline-none" style={{ backgroundColor: "#fff", border: `1px solid ${INK}`, color: INK }} />
-        <label className="text-[11px] uppercase tracking-wide font-medium" style={{ color: SLATE }}>Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters"
-          className="w-full mt-1 mb-6 rounded-xl px-4 py-3 outline-none" style={{ backgroundColor: "#fff", border: `1px solid ${INK}`, color: INK }} />
-        <button onClick={onSignedIn} className="w-full rounded-2xl py-4 font-bold text-base mb-6" style={{ backgroundColor: AMBER, color: INK }}>
-          {tab === "signin" ? "Sign in" : "Create account"} →
+        <p className="text-sm mb-10" style={{ color: SLATE }}>Sign in with GitHub to keep your games synced.</p>
+
+        <button onClick={onSignedIn}
+          className="w-full rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 mb-4 transition-transform active:scale-[0.98] hover:brightness-95"
+          style={{ backgroundColor: INK, color: CREAM }}>
+          <IconGithub size={18} /> Continue with GitHub
         </button>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-px flex-1" style={{ backgroundColor: LINE }} />
-          <span className="text-xs" style={{ color: SLATE }}>OR</span>
-          <div className="h-px flex-1" style={{ backgroundColor: LINE }} />
-        </div>
-        <button onClick={onSignedIn} className="w-full rounded-2xl py-4 font-semibold text-base" style={{ border: `1px solid ${INK}`, color: INK }}>
-          Continue with GitHub
-        </button>
+
+        <p className="text-xs leading-relaxed" style={{ color: SLATE }}>
+          Email sign-in is coming later — it needs a backend to store accounts
+          (like Turso), which isn't wired up yet.
+        </p>
       </div>
     </div>
   );
 }
 
+/* ---------- Sidebar ---------- */
 function Sidebar({ open, onClose, active, onNavigate, onSignOut }) {
-  if (!open) return null;
   const NAV = [
-    { key: "home", label: "Home", icon: "🏠" },
-    { key: "today", label: "Today", icon: "🏆" },
-    { key: "games", label: "Games", icon: "🎲" },
-    { key: "settings", label: "Settings", icon: "⚙" },
+    { key: "home", label: "Home", Icon: IconHome },
+    { key: "inplay", label: "In Play", Icon: IconTrophy },
+    { key: "games", label: "Games", Icon: IconDice },
+    { key: "settings", label: "Settings", Icon: IconSettings },
   ];
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="w-[280px] h-full flex flex-col px-5 pt-6" style={{ backgroundColor: INK }}>
+    <div className={"fixed inset-0 z-50 flex " + (open ? "" : "pointer-events-none")}>
+      <div
+        className="w-[280px] h-full flex flex-col px-5 pt-6 transition-transform duration-300 ease-out"
+        style={{ backgroundColor: INK, transform: open ? "translateX(0)" : "translateX(-100%)" }}
+      >
         <div className="flex items-center justify-between mb-8">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: AMBER }} />
-          <button onClick={onClose} aria-label="Close menu" style={{ color: CREAM, fontSize: 20 }}>✕</button>
+          <button onClick={onClose} aria-label="Close menu" className="transition-transform active:scale-90 hover:opacity-70">
+            <IconX size={22} color={CREAM} />
+          </button>
         </div>
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-3" style={{ color: "#8890A0" }}>My Scorecardr</p>
         <nav className="flex flex-col gap-1">
-          {NAV.map(({ key, label, icon }) => {
+          {NAV.map(({ key, label, Icon }) => {
             const isActive = active === key;
             return (
-              <button key={key} onClick={() => onNavigate(key)} className="flex items-center gap-3 rounded-xl px-4 py-3 text-left font-semibold"
+              <button key={key} onClick={() => onNavigate(key)}
+                className="flex items-center gap-3 rounded-xl px-4 py-3 text-left font-semibold transition-all active:scale-[0.98]"
                 style={{ backgroundColor: isActive ? AMBER : "transparent", color: isActive ? INK : CREAM }}>
-                <span>{icon}</span>{label}
+                <Icon size={18} />{label}
               </button>
             );
           })}
         </nav>
         <div className="mt-auto mb-8">
-          <button onClick={onSignOut} className="font-semibold" style={{ color: CREAM }}>Sign out</button>
+          <button onClick={onSignOut} className="font-semibold transition-opacity hover:opacity-70" style={{ color: CREAM }}>Sign out</button>
         </div>
       </div>
-      <div className="flex-1 h-full bg-black/30" onClick={onClose} />
+      <div
+        className="flex-1 h-full bg-black transition-opacity duration-300"
+        style={{ opacity: open ? 0.3 : 0 }}
+        onClick={onClose}
+      />
     </div>
   );
 }
 
+/* ---------- Home ---------- */
 function HomeScreen({ onOpenMenu, log, round, onNewGame }) {
   return (
     <div className="min-h-screen w-full flex justify-center relative" style={{ backgroundColor: CREAM }}>
-      <div className="w-full max-w-sm px-6 pt-6 pb-28">
+      <div className="w-full max-w-sm px-6 pt-6 pb-28 animate-fadein">
         <TopBar onOpenMenu={onOpenMenu} />
         <div className="h-px w-full mb-6" style={{ backgroundColor: LINE }} />
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-1" style={{ color: SLATE }}>This Game</p>
@@ -121,12 +179,13 @@ function HomeScreen({ onOpenMenu, log, round, onNewGame }) {
         {log.length === 0 ? (
           <div className="rounded-2xl px-4 py-8 text-center" style={{ backgroundColor: "#FFFFFF", border: `1px dashed ${LINE}` }}>
             <p className="font-semibold mb-1" style={{ color: INK }}>No rounds logged yet</p>
-            <p className="text-sm" style={{ color: SLATE }}>Head to Today and tap "Start round {round + 1}" to save round {round}'s scores here.</p>
+            <p className="text-sm" style={{ color: SLATE }}>Head to In Play and tap "Start round {round + 1}" to save round {round}'s scores here.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {[...log].reverse().map((entry) => (
-              <div key={entry.round} className="rounded-2xl px-4 py-4" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
+            {[...log].reverse().map((entry, i) => (
+              <div key={entry.round} className="rounded-2xl px-4 py-4 transition-shadow hover:shadow-md animate-fadein"
+                style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}`, animationDelay: `${i * 40}ms` }}>
                 <p className="text-[11px] uppercase tracking-wide font-semibold mb-2" style={{ color: SLATE }}>Round {entry.round}</p>
                 <div className="flex flex-col gap-1">
                   {entry.scores.map((s) => (
@@ -141,14 +200,17 @@ function HomeScreen({ onOpenMenu, log, round, onNewGame }) {
           </div>
         )}
       </div>
-      <button onClick={onNewGame} className="fixed bottom-8 right-6 rounded-full px-5 py-4 font-bold text-sm shadow-lg" style={{ backgroundColor: AMBER, color: INK }}>
-        + New Game
+      <button onClick={onNewGame}
+        className="fixed bottom-8 right-6 rounded-full px-5 py-4 font-bold text-sm flex items-center gap-2 shadow-lg transition-transform active:scale-95 hover:scale-105"
+        style={{ backgroundColor: AMBER, color: INK }}>
+        <IconPlus size={16} /> New Game
       </button>
     </div>
   );
 }
 
-function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRound, gameName, setGameName }) {
+/* ---------- In Play (was Today) ---------- */
+function InPlayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRound, gameName, setGameName }) {
   const [editingGameName, setEditingGameName] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [newPlayer, setNewPlayer] = useState("");
@@ -189,9 +251,13 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
 
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ backgroundColor: CREAM }}>
-      <div className="w-full max-w-sm px-6 pt-6 pb-16">
+      <div className="w-full max-w-sm px-6 pt-6 pb-16 animate-fadein">
         <TopBar onOpenMenu={onOpenMenu} right={
-          <button onClick={resetGame} className="text-[11px] uppercase tracking-wider font-medium" style={{ color: SLATE }}>↻ Reset</button>
+          <button onClick={resetGame}
+            className="flex items-center gap-1 text-[11px] uppercase tracking-wider font-medium transition-opacity hover:opacity-60"
+            style={{ color: SLATE }}>
+            <IconRotate size={12} /> Reset
+          </button>
         } />
         <div className="h-px w-full mb-6" style={{ backgroundColor: LINE }} />
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-1" style={{ color: SLATE }}>Round {round}</p>
@@ -203,12 +269,12 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
                 onKeyDown={(e) => e.key === "Enter" && setEditingGameName(false)}
                 className="flex-1 bg-transparent border-none outline-none font-bold leading-tight"
                 style={{ fontFamily: SERIF, fontSize: "30px", color: INK }} />
-              <button onClick={() => setEditingGameName(false)} style={{ color: AMBER_DARK }}>✓</button>
+              <button onClick={() => setEditingGameName(false)} className="transition-transform active:scale-90"><IconCheck size={20} color={AMBER_DARK} /></button>
             </>
           ) : (
             <>
               <h1 className="font-bold leading-tight" style={{ fontFamily: SERIF, fontSize: "30px", color: INK }}>{gameName}</h1>
-              <button onClick={() => setEditingGameName(true)} style={{ color: SLATE }}>✎</button>
+              <button onClick={() => setEditingGameName(true)} className="transition-transform active:scale-90 hover:opacity-70"><IconPencil size={16} color={SLATE} /></button>
             </>
           )}
         </div>
@@ -224,11 +290,13 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
               const isLeader = p.id === leaderId && p.score > 0;
               const isEditing = editingPlayerId === p.id;
               return (
-                <div key={p.id} className="rounded-2xl px-4 py-4" style={{ backgroundColor: "#FFFFFF", border: isLeader ? `2px solid ${AMBER}` : `1px solid ${LINE}` }}>
+                <div key={p.id}
+                  className="rounded-2xl px-4 py-4 transition-all duration-200"
+                  style={{ backgroundColor: "#FFFFFF", border: isLeader ? `2px solid ${AMBER}` : `1px solid ${LINE}` }}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex flex-col min-w-0 flex-1 mr-2">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        {isLeader && <span>🏆</span>}
+                        {isLeader && <span className="animate-fadein"><IconTrophy size={13} color={AMBER_DARK} /></span>}
                         {isEditing ? (
                           <input autoFocus value={p.name} onChange={(e) => renamePlayer(p.id, e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && setEditingPlayerId(null)}
@@ -236,21 +304,36 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
                             className="font-semibold bg-transparent outline-none border-b min-w-0"
                             style={{ color: INK, fontSize: "15px", borderColor: AMBER }} />
                         ) : (
-                          <button onClick={() => setEditingPlayerId(p.id)} className="font-semibold truncate text-left" style={{ color: INK, fontSize: "15px" }}>
+                          <button onClick={() => setEditingPlayerId(p.id)} className="font-semibold truncate text-left transition-opacity hover:opacity-70" style={{ color: INK, fontSize: "15px" }}>
                             {p.name}
                           </button>
                         )}
                       </div>
-                      <span className="text-2xl font-bold tabular-nums" style={{ fontFamily: SERIF, color: INK }}>{p.score}</span>
+                      <ScoreValue value={p.score} />
                     </div>
-                    <button onClick={() => removePlayer(p.id)} style={{ color: SLATE }}>✕</button>
+                    <button onClick={() => removePlayer(p.id)}
+                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 hover:bg-black/5"
+                      style={{ color: SLATE }} aria-label={`Remove ${p.name}`}>
+                      <IconX size={13} />
+                    </button>
                   </div>
+
                   <div className="flex items-center gap-2">
                     <input type="number" value={amounts[p.id] ?? ""} onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))}
-                      placeholder="1" className="w-16 rounded-lg px-2 py-2 text-sm text-center outline-none"
-                      style={{ border: `1px solid ${LINE}`, color: INK }} />
-                    <button onClick={() => adjustScore(p.id, -1)} className="flex-1 h-9 rounded-lg text-sm font-semibold" style={{ backgroundColor: CREAM, color: INK }}>− Minus</button>
-                    <button onClick={() => adjustScore(p.id, 1)} className="flex-1 h-9 rounded-lg text-sm font-semibold" style={{ backgroundColor: AMBER, color: INK }}>+ Add</button>
+                      placeholder="1"
+                      className="w-16 rounded-lg px-2 py-2 text-sm text-center outline-none transition-shadow focus:shadow-[0_0_0_3px_rgba(227,162,60,0.3)]"
+                      style={{ border: `1px solid ${LINE}`, color: INK }}
+                      aria-label={`Points to add or subtract for ${p.name}`} />
+                    <button onClick={() => adjustScore(p.id, -1)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1 text-sm font-semibold transition-all active:scale-95 hover:brightness-95"
+                      style={{ backgroundColor: CREAM, color: INK }}>
+                      <IconMinus size={14} /> Minus
+                    </button>
+                    <button onClick={() => adjustScore(p.id, 1)}
+                      className="flex-1 h-9 rounded-lg flex items-center justify-center gap-1 text-sm font-semibold transition-all active:scale-95 hover:brightness-95"
+                      style={{ backgroundColor: AMBER, color: INK }}>
+                      <IconPlus size={14} /> Add
+                    </button>
                   </div>
                 </div>
               );
@@ -258,17 +341,18 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
           </div>
         )}
 
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-2 mb-8" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
-          <span style={{ color: SLATE }}>＋</span>
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-2 mb-8 transition-shadow focus-within:shadow-[0_0_0_3px_rgba(227,162,60,0.3)]"
+          style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
+          <IconUserPlus size={16} color={SLATE} />
           <input value={newPlayer} onChange={(e) => setNewPlayer(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPlayer()}
             placeholder="Add a player" className="flex-1 bg-transparent outline-none text-sm" style={{ color: INK }} />
-          <button onClick={addPlayer} className="text-xs font-semibold uppercase tracking-wide" style={{ color: AMBER_DARK }}>Add</button>
+          <button onClick={addPlayer} className="text-xs font-semibold uppercase tracking-wide transition-opacity hover:opacity-70" style={{ color: AMBER_DARK }}>Add</button>
         </div>
 
         <button onClick={startNextRound} disabled={players.length === 0}
-          className="w-full rounded-2xl py-4 font-bold text-base"
+          className="w-full rounded-2xl py-4 font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] hover:brightness-95 disabled:cursor-not-allowed"
           style={{ backgroundColor: players.length === 0 ? LINE : AMBER, color: players.length === 0 ? SLATE : INK }}>
-          Start round {round + 1} →
+          Start round {round + 1} <IconArrowRight size={16} />
         </button>
         <p className="text-center text-[11px] mt-4" style={{ color: SLATE }}>Type a number, then tap Add or Minus to apply it.</p>
       </div>
@@ -276,52 +360,63 @@ function TodayScreen({ onOpenMenu, players, setPlayers, round, setRound, onLogRo
   );
 }
 
+/* ---------- Games — no presets, real empty state ---------- */
 function GamesScreen({ onOpenMenu }) {
-  const PAST_GAMES = [
-    { name: "Catan Sunday", players: 4, date: "Aug 2" },
-    { name: "Poker w/ the crew", players: 5, date: "Jul 26" },
-  ];
+  const games = [];
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ backgroundColor: CREAM }}>
-      <div className="w-full max-w-sm px-6 pt-6 pb-16">
+      <div className="w-full max-w-sm px-6 pt-6 pb-16 animate-fadein">
         <TopBar onOpenMenu={onOpenMenu} />
         <div className="h-px w-full mb-6" style={{ backgroundColor: LINE }} />
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-1" style={{ color: SLATE }}>Past Games</p>
         <h1 className="font-bold leading-tight mb-8" style={{ fontFamily: SERIF, fontSize: "30px", color: INK }}>Every game, kept.</h1>
-        <div className="flex flex-col gap-3">
-          {PAST_GAMES.map((g) => (
-            <div key={g.name} className="rounded-2xl px-4 py-4 flex items-center gap-3" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: CREAM }}>🎲</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate" style={{ color: INK }}>{g.name}</p>
-                <p className="text-xs" style={{ color: SLATE }}>{g.players} players</p>
+        {games.length === 0 ? (
+          <div className="rounded-2xl px-4 py-8 text-center" style={{ backgroundColor: "#FFFFFF", border: `1px dashed ${LINE}` }}>
+            <IconInbox size={22} color={SLATE} />
+            <p className="font-semibold mt-2 mb-1" style={{ color: INK }}>No games yet</p>
+            <p className="text-sm" style={{ color: SLATE }}>Finish a game from Home and it'll show up here.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {games.map((g) => (
+              <div key={g.name} className="rounded-2xl px-4 py-4 flex items-center gap-3 transition-shadow hover:shadow-md" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: CREAM }}>
+                  <IconDice size={18} color={INK} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate" style={{ color: INK }}>{g.name}</p>
+                  <p className="text-xs" style={{ color: SLATE }}>{g.players} players</p>
+                </div>
+                <span className="text-xs" style={{ color: SLATE }}>{g.date}</span>
               </div>
-              <span className="text-xs" style={{ color: SLATE }}>{g.date}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+/* ---------- Settings ---------- */
 function SettingsScreen({ onOpenMenu }) {
   const rows = [
-    { icon: "👤", label: "Account details" },
-    { icon: "🔔", label: "Notifications" },
-    { icon: "🗑", label: "Delete account" },
+    { Icon: IconUser, label: "Account details" },
+    { Icon: IconBell, label: "Notifications" },
+    { Icon: IconTrash, label: "Delete account" },
   ];
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ backgroundColor: CREAM }}>
-      <div className="w-full max-w-sm px-6 pt-6 pb-16">
+      <div className="w-full max-w-sm px-6 pt-6 pb-16 animate-fadein">
         <TopBar onOpenMenu={onOpenMenu} />
         <div className="h-px w-full mb-6" style={{ backgroundColor: LINE }} />
         <p className="tracking-[0.18em] text-[11px] font-medium uppercase mb-1" style={{ color: SLATE }}>Preferences</p>
         <h1 className="font-bold leading-tight mb-8" style={{ fontFamily: SERIF, fontSize: "30px", color: INK }}>Settings</h1>
         <div className="flex flex-col gap-3">
-          {rows.map(({ icon, label }) => (
-            <button key={label} className="rounded-2xl px-4 py-4 flex items-center gap-3 text-left" style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
-              <span>{icon}</span>
+          {rows.map(({ Icon, label }) => (
+            <button key={label}
+              className="rounded-2xl px-4 py-4 flex items-center gap-3 text-left transition-all active:scale-[0.98] hover:shadow-md"
+              style={{ backgroundColor: "#FFFFFF", border: `1px solid ${LINE}` }}>
+              <Icon size={18} color={INK} />
               <span className="font-semibold" style={{ color: INK }}>{label}</span>
             </button>
           ))}
@@ -331,6 +426,7 @@ function SettingsScreen({ onOpenMenu }) {
   );
 }
 
+/* ---------- App ---------- */
 function App() {
   const [signedIn, setSignedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -348,7 +444,7 @@ function App() {
     setRound(1);
     setLog([]);
     setGameName("New Game");
-    setScreen("today");
+    setScreen("inplay");
   }
 
   if (!signedIn) return <SignIn onSignedIn={() => setSignedIn(true)} />;
@@ -362,8 +458,8 @@ function App() {
     <>
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} active={screen} onNavigate={navigate} onSignOut={() => setSignedIn(false)} />
       {screen === "home" && <HomeScreen onOpenMenu={() => setMenuOpen(true)} log={log} round={round} onNewGame={newGame} />}
-      {screen === "today" && (
-        <TodayScreen onOpenMenu={() => setMenuOpen(true)} players={players} setPlayers={setPlayers}
+      {screen === "inplay" && (
+        <InPlayScreen onOpenMenu={() => setMenuOpen(true)} players={players} setPlayers={setPlayers}
           round={round} setRound={setRound} onLogRound={logRound} gameName={gameName} setGameName={setGameName} />
       )}
       {screen === "games" && <GamesScreen onOpenMenu={() => setMenuOpen(true)} />}
